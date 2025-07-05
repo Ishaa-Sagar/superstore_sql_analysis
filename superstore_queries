@@ -1,0 +1,70 @@
+
+SELECT 
+    COUNT(*) AS TotalOrders,
+    SUM(Sales) AS TotalSales,
+    AVG(Sales) AS AverageOrderValue
+FROM train;
+
+SELECT 
+    FORMAT(CAST([Order_Date] AS DATE), 'yyyy-MM') AS OrderMonth,
+    SUM(Sales) AS MonthlySales
+FROM train
+GROUP BY FORMAT(CAST([Order_Date] AS DATE), 'yyyy-MM')
+ORDER BY OrderMonth;
+
+SELECT 
+    [State],
+    SUM([Sales]) AS TotalSales
+FROM dbo.train
+GROUP BY [State]
+ORDER BY TotalSales DESC
+OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY;
+
+SELECT 
+    [Region],
+    [Segment],
+    SUM([Sales]) AS TotalSales
+FROM train
+GROUP BY [Region], [Segment]
+ORDER BY Region, TotalSales DESC;
+
+SELECT 
+    [Product_Name],
+    SUM([Sales]) AS TotalRevenue
+FROM train
+GROUP BY [Product_Name]
+ORDER BY TotalRevenue DESC
+OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY;
+
+SELECT 
+    [Customer_ID],
+    [Customer_Name],
+    SUM([Sales]) AS TotalSpent
+FROM train
+GROUP BY [Customer_ID], [Customer_Name]
+ORDER BY TotalSpent DESC
+OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY;
+
+SELECT 
+    [Category],
+    [Sub_Category],
+    SUM([Sales]) AS TotalSales,
+    COUNT(*) AS OrderCount
+FROM train
+GROUP BY [Category], [Sub_Category]
+ORDER BY Category, TotalSales DESC;
+
+SELECT 
+    [Ship_Mode],
+    COUNT(*) AS TotalOrders,
+    AVG(DATEDIFF(DAY, [Order_Date], [Ship_Date])) AS AvgDeliveryTime_Days
+FROM train
+GROUP BY [Ship_Mode];
+
+SELECT 
+    COUNT(DISTINCT [Order_ID]) AS TotalOrders,
+    COUNT(DISTINCT [Customer_ID]) AS UniqueCustomers,
+    COUNT(DISTINCT [Product_ID]) AS UniqueProducts,
+    SUM([Sales]) AS TotalSales,
+    AVG([Sales]) AS AvgOrderValue
+FROM train;
