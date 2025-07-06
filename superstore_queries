@@ -1,10 +1,11 @@
-
+--Total Sales and Order Count
 SELECT 
     COUNT(*) AS TotalOrders,
     SUM(Sales) AS TotalSales,
     AVG(Sales) AS AverageOrderValue
 FROM train;
 
+--Monthly Sales Trend
 SELECT 
     FORMAT(CAST([Order_Date] AS DATE), 'yyyy-MM') AS OrderMonth,
     SUM(Sales) AS MonthlySales
@@ -12,6 +13,7 @@ FROM train
 GROUP BY FORMAT(CAST([Order_Date] AS DATE), 'yyyy-MM')
 ORDER BY OrderMonth;
 
+--Top 5 States by sale
 SELECT 
     [State],
     SUM([Sales]) AS TotalSales
@@ -20,6 +22,7 @@ GROUP BY [State]
 ORDER BY TotalSales DESC
 OFFSET 0 ROWS FETCH NEXT 5 ROWS ONLY;
 
+--Sales by Region and Segment
 SELECT 
     [Region],
     [Segment],
@@ -28,6 +31,7 @@ FROM train
 GROUP BY [Region], [Segment]
 ORDER BY Region, TotalSales DESC;
 
+--Top 10 Products by Revenue
 SELECT 
     [Product_Name],
     SUM([Sales]) AS TotalRevenue
@@ -36,6 +40,7 @@ GROUP BY [Product_Name]
 ORDER BY TotalRevenue DESC
 OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY;
 
+--Top 10 Customers by spend
 SELECT 
     [Customer_ID],
     [Customer_Name],
@@ -45,6 +50,7 @@ GROUP BY [Customer_ID], [Customer_Name]
 ORDER BY TotalSpent DESC
 OFFSET 0 ROWS FETCH NEXT 10 ROWS ONLY;
 
+--Category and Sub-Category Sales Summary
 SELECT 
     [Category],
     [Sub_Category],
@@ -54,6 +60,7 @@ FROM train
 GROUP BY [Category], [Sub_Category]
 ORDER BY Category, TotalSales DESC;
 
+--Shipping Mode and Average Delivery Time
 SELECT 
     [Ship_Mode],
     COUNT(*) AS TotalOrders,
@@ -61,6 +68,7 @@ SELECT
 FROM train
 GROUP BY [Ship_Mode];
 
+--Basic KPI's
 SELECT 
     COUNT(DISTINCT [Order_ID]) AS TotalOrders,
     COUNT(DISTINCT [Customer_ID]) AS UniqueCustomers,
@@ -68,3 +76,84 @@ SELECT
     SUM([Sales]) AS TotalSales,
     AVG([Sales]) AS AvgOrderValue
 FROM train;
+
+-- States with high total sales (above 100K) using UNION with a different filter
+SELECT DISTINCT [State] FROM train
+WHERE [Sales] > 100000
+
+UNION
+
+SELECT DISTINCT [State] FROM train
+WHERE [Segment] = 'Corporate';
+
+-- Products sold in both Technology and Furniture categories (INTERSECT)
+SELECT DISTINCT [Product_Name] FROM train
+WHERE [Category] = 'Technology'
+
+INTERSECT
+
+SELECT DISTINCT [Product_Name] FROM train
+WHERE [Category] = 'Furniture';
+
+--  Products sold in Office Supplies but not in Furniture (EXCEPT)
+SELECT DISTINCT [Product_Name] FROM train
+WHERE [Category] = 'Office Supplies'
+
+EXCEPT
+
+SELECT DISTINCT [Product_Name] FROM train
+WHERE [Category] = 'Furniture';
+
+
+-- Trigger: Audit table for insert tracking
+
+IF OBJECT_ID('dbo.train_audit', 'U') IS NOT NULL DROP TABLE dbo.train_audit;
+CREATE TABLE dbo.train_audit (
+    AuditID INT IDENTITY(1,1) PRIMARY KEY,
+    OrderID NVARCHAR(50),
+    InsertedAt DATETIME DEFAULT GETDATE()
+);
+
+CREATE TRIGGER trg_InsertAudit
+ON dbo.train
+AFTER INSERT
+AS
+BEGIN
+    INSERT INTO dbo.train_audit (OrderID)
+    SELECT [Order ID]
+    FROM inserted;
+END;
+
+--Query to use the trigger
+INSERT INTO dbo.train (
+    [Order ID], [Order Date], [Ship Date], [Ship Mode], [Customer ID],
+    [Customer Name], [Segment], [Country], [City], [State], [Postal Code],
+    [Region], [Product ID], [Category], [Sub-Category], [Product Name],
+    [Sales], [Quantity], [Discount], [Profit]
+)
+VALUES (
+    'TRG-0001', '2023-10-01', '2023-10-04', 'Standard Class', 'CUST-999',
+    'Test User', 'Consumer', 'India', 'Mumbai', 'Maharashtra', 400001,
+    'West', 'PROD-999', 'Office Supplies', 'Paper', 'Test Paper',
+    100.00, 2, 0.1, 15.00
+);
+
+SELECT * FROM dbo.train_audit ORDER BY InsertedAt DESC;
+
+
+-- View: Sales summary by state and segment
+IF OBJECT_ID('dbo.vw_SalesByStateSegment', 'V') IS NOT NULL DROP VIEW dbo.vw_SalesByStateSegment;
+GO
+CREATE VIEW dbo.vw_SalesByStateSegment AS
+SELECT 
+    [State],
+    [Segment],
+    SUM([Sales]) AS TotalSales,
+    SUM([Profit]) AS TotalProfit,
+    COUNT(*) AS OrderCount
+FROM dbo.train
+GROUP BY [State], [Segment];
+
+-- Sample query to use the view
+-- SELECT * FROM dbo.vw_SalesByStateSegment WHERE Segment = 'Corporate';
+
